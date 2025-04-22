@@ -8,6 +8,7 @@ import threading
 import sounddevice as sd
 import numpy as np
 import scipy.io.wavfile as wav
+import whisper
 
 
 # booleans to set scrolling modes
@@ -15,8 +16,8 @@ scroll_up = False
 scroll_down = False
 clicking = False
 ssing = False
-# recording = False
 recording = threading.Event()
+
 
 # simple math distance formula to detect finger proximity
 def distance(coords1, coords2):
@@ -74,6 +75,9 @@ mp_drawing = mp.solutions.drawing_utils
 #         print(f"Successfully connected to camera with index {camera_index}")
 
 cap = cv2.VideoCapture(1)
+
+# Load the Whisper model (you can use "base", "small", "medium", "large")
+model = whisper.load_model("small.en")
 
 # # Set camera window properties to full screen
 # cv2.namedWindow("Hand Tracking", cv2.WND_PROP_FULLSCREEN)
@@ -160,6 +164,13 @@ while cap.isOpened():
             elif not distance(thumb_coords, palm_coords) < 60 and recording.is_set():
                 recording.clear()
                 print("Recording complete.")
+
+                # Transcribe the audio file
+                result = model.transcribe("output.wav")
+
+                # Print the transcribed text
+                print("Transcribed Text:")
+                print(result["text"])
 
             # EXECUTIONS --------------------------------------------------------------------------
 
