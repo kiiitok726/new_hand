@@ -16,7 +16,6 @@ scroll_up = False
 scroll_down = False
 clicking = False
 ssing = False
-taking_photo = False
 recording = threading.Event()
 
 
@@ -94,6 +93,10 @@ cap = cv2.VideoCapture(0)
 # Load the Whisper model (you can use "base", "small", "medium", "large")
 model = whisper.load_model("tiny.en")
 
+# Load OpenCV's pre-classified models
+face_cascade  = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
+smile_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_smile.xml")
+
 # # Set camera window properties to full screen
 # cv2.namedWindow("Hand Tracking", cv2.WND_PROP_FULLSCREEN)
 # cv2.setWindowProperty("Hand Tracking", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
@@ -115,11 +118,37 @@ while cap.isOpened():
     # Find camera window dimensions
     h, w, c = frame.shape
 
+    # Default blue color
     color = (255, 0, 0)
 
-    # print(frame.shape)
-    # print(pyautogui.size())
-    # w, h = pyautogui.size()
+    # Grayscale for face detection
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+    # 4) Detect faces
+    faces = face_cascade.detectMultiScale(
+        gray,
+        scaleFactor=1.1,
+        minNeighbors=5,
+        minSize=(100, 100)
+    )
+
+    for (f_x, f_y, f_w, f_h) in faces:
+        cv2.rectangle(frame, (f_x,f_y), (f_x+f_w, f_y+f_h), (255, 0, 0), 2)
+        face_roi_gray = gray[f_y:f_y+f_h, f_x:f_x+f_w]
+        face_roi_color = frame[f_y:f_y+f_h, f_x:f_x+f_w]
+
+        smiles = smile_cascade.detectMultiScale(
+            face_roi_gray,
+            scaleFactor=1.9,
+            minNeighbors=30,
+            minSize=(40, 40)
+        )
+        # If smile detected, take photo
+        if len(smiles) > 0:
+            cv2.putText(frame, "Smiling", (f_x, f_y-10),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0,255,0), 2)
+            
+            cv2.imwrite(f"/Users/kaito/Desktop/HTC_output/HTC photo - {time.asctime()}.png", frame)
 
     # Convert the BGR image to RGB.
     rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -170,10 +199,6 @@ while cap.isOpened():
             # Check for ss
             if distance(ring_coords, palm_coords) < 25:
                 ssing = True
-            
-            # Check for photo
-            if distance(middle_coords, palm_coords) < 30:
-                taking_photo = True
 
             # Check for recording
             if distance(thumb_coords, palm_coords) < 60 and not recording.is_set():
@@ -206,13 +231,8 @@ while cap.isOpened():
             # SS
             if ssing:
                 pyautogui.screenshot(f"Hand Track Cam - {time.asctime()}")
-                subprocess.run(["screencapture", f"/Users/kaito/Desktop/HTC ss - {time.asctime()}.png"])
+                subprocess.run(["screencapture", f"/Users/kaito/Desktop/HTC_output/HTC ss - {time.asctime()}.png"])
                 color = (0, 255, 255)
-            
-            # Take photo
-            if taking_photo:
-                cv2.imwrite(f"/Users/kaito/Desktop/HTC photo - {time.asctime()}.png", frame)
-                color = (0, 165, 255)
 
             # Recording
             if recording.is_set():
@@ -243,7 +263,6 @@ while cap.isOpened():
         scroll_down = False
         clicking = False
         ssing = False
-        taking_photo = False
 
         color = (255, 0, 0)
 
