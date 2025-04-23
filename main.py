@@ -51,7 +51,7 @@ def record_audio_on_event(trigger, filename="output.wav"):
     print(result["text"], flush=True)
 
     # Type the transcribed text
-    pyautogui.typewrite(result["text"], interval=0.05)
+    pyautogui.typewrite(result["text"], interval=0.02)
  
 
 # initialize the media pipe hands (up to 2 hands)
@@ -63,7 +63,7 @@ hands = mp_hands.Hands(
 mp_drawing = mp.solutions.drawing_utils
 
 
-# Start capturing video from the webcam, try cam 1 if cam 0 does not work
+## Initialize webcam, try cam 1 if cam 0 does not work
 # try:
 #     cap = cv2.VideoCapture(1)
 #     print("Camera 1 Activated")
@@ -71,24 +71,30 @@ mp_drawing = mp.solutions.drawing_utils
 #     cap = cv2.VideoCapture(0)
 #     print("Camera 0 Activated")
 
-# for camera_index in range(3):  # Try indices 0, 1, and 2
-#         print(f"Trying to open camera with index {camera_index}...")
-#         cap = cv2.VideoCapture(camera_index)
-        
-#         if not cap.isOpened():
-#             print(f"Failed to open camera with index {camera_index}.")
-#             continue
-            
-#         # Check if we can actually read from the camera
-#         success, test_frame = cap.read()
-#         if not success:
-#             print(f"Camera opened but failed to read frame from index {camera_index}.")
-#             cap.release()
-#             continue
-            
-#         print(f"Successfully connected to camera with index {camera_index}")
 
-cap = cv2.VideoCapture(0)
+# Initialize webcam, try multiple indices
+for camera_index in range(3):  # Try indices 0, 1, and 2
+        print(f"Trying to open camera with index {camera_index}...")
+        cap = cv2.VideoCapture(camera_index)
+        
+        if not cap.isOpened():
+            print(f"Failed to open camera with index {camera_index}.")
+            continue
+            
+        # Check if we can actually read from the camera
+        success, test_frame = cap.read()
+        if not success:
+            print(f"Camera opened but failed to read frame from index {camera_index}.")
+            cap.release()
+            continue
+            
+        print(f"Successfully connected to camera with index {camera_index}")
+
+## Initialize specific webcam
+# cap = cv2.VideoCapture(0)
+
+# Create webcam window
+cv2.namedWindow("Hand Track Cam")
 
 # Load the Whisper model (you can use "base", "small", "medium", "large")
 model = whisper.load_model("tiny.en")
@@ -97,34 +103,26 @@ model = whisper.load_model("tiny.en")
 face_cascade  = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
 smile_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_smile.xml")
 
-# # Set camera window properties to full screen
-# cv2.namedWindow("Hand Tracking", cv2.WND_PROP_FULLSCREEN)
-# cv2.setWindowProperty("Hand Tracking", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
-# Create window
-cv2.namedWindow("Hand Track Cam")
-
-
-# Main loop, ran every frame
+# MAIN LOOP (ran every frame) -------------------------------------------------------------------
 while cap.isOpened():
     ret, frame = cap.read()
-
     if not ret:
         continue
 
     # Flip window(the frame array) by horizontal axis only
     frame = cv2.flip(frame, 1)
 
-    # Find camera window dimensions
+    # Find webcam window dimensions
     h, w, c = frame.shape
 
-    # Default blue color
+    # Default blue color for lines
     color = (255, 0, 0)
 
-    # Grayscale for face detection
+    # Grayscaling for face detection
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-    # 4) Detect faces
+    # Detect faces using preclassified model
     faces = face_cascade.detectMultiScale(
         gray,
         scaleFactor=1.1,
@@ -137,12 +135,14 @@ while cap.isOpened():
         face_roi_gray = gray[f_y:f_y+f_h, f_x:f_x+f_w]
         face_roi_color = frame[f_y:f_y+f_h, f_x:f_x+f_w]
 
+        # Detect any smiles among detected faces
         smiles = smile_cascade.detectMultiScale(
             face_roi_gray,
             scaleFactor=1.9,
             minNeighbors=30,
             minSize=(40, 40)
         )
+
         # If smile detected, take photo
         if len(smiles) > 0:
             cv2.putText(frame, "Smiling", (f_x, f_y-10),
@@ -152,8 +152,10 @@ while cap.isOpened():
 
     # Convert the BGR image to RGB.
     rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    # Process any present hands
     result = hands.process(rgb_frame)
 
+    # Run gesture detection, analysis, drawings if any hands are detected
     if result.multi_hand_landmarks:
         for hand_landmarks in result.multi_hand_landmarks:
             # Calculate the palm center by averaging the coordinates of landmarks:
@@ -178,10 +180,6 @@ while cap.isOpened():
             palm_x = sum([hand_landmarks.landmark[i].x for i in indices]) / len(indices)
             palm_y = sum([hand_landmarks.landmark[i].y for i in indices]) / len(indices)
             palm_coords = (int(palm_x * w), int(palm_y * h))
-            
-
-            # Optionally, draw all hand landmarks 
-            # mp_drawing.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
 
 
             # DETECTIONS -------------------------------------------------------------------------
