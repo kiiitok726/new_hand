@@ -16,6 +16,7 @@ scroll_up = False
 scroll_down = False
 clicking = False
 ssing = False
+taking_photo = False
 recording = threading.Event()
 
 
@@ -30,14 +31,28 @@ def record_audio_on_event(trigger, filename="output.wav"):
     def callback(indata, frames, time_info, status):
         recorded.append(indata.copy())
 
+    print("Recording started...", flush=True)
+
     with sd.InputStream(samplerate=44100, channels=1, callback=callback):
         while trigger.is_set():  # Keep recording while the flag is True
             sd.sleep(100)
+    
+    print("Recording complete.", flush=True)
 
     audio = np.concatenate(recorded, axis=0)
     audio = np.int16(audio * 32767)
     wav.write(filename, 44100, audio)
-    print(f"[Audio saved as {filename}]")
+    print(f"[Audio saved as {filename}]", flush=True)
+
+    # Transcribe the audio file
+    result = model.transcribe("output.wav")
+
+    # Print the transcribed text
+    print("Transcribed Text:", flush=True)
+    print(result["text"], flush=True)
+
+    # Type the transcribed text
+    pyautogui.typewrite(result["text"], interval=0.05)
  
 
 # initialize the media pipe hands (up to 2 hands)
@@ -74,10 +89,10 @@ mp_drawing = mp.solutions.drawing_utils
             
 #         print(f"Successfully connected to camera with index {camera_index}")
 
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(0)
 
 # Load the Whisper model (you can use "base", "small", "medium", "large")
-model = whisper.load_model("small.en")
+model = whisper.load_model("tiny.en")
 
 # # Set camera window properties to full screen
 # cv2.namedWindow("Hand Tracking", cv2.WND_PROP_FULLSCREEN)
@@ -155,22 +170,20 @@ while cap.isOpened():
             # Check for ss
             if distance(ring_coords, palm_coords) < 25:
                 ssing = True
+            
+            # Check for photo
+            if distance(middle_coords, palm_coords) < 30:
+                taking_photo = True
 
             # Check for recording
             if distance(thumb_coords, palm_coords) < 60 and not recording.is_set():
                 recording.set()
                 threading.Thread(target=record_audio_on_event, args=(recording, ), daemon=True).start()
-                print("Recording started...")
-            elif not distance(thumb_coords, palm_coords) < 60 and recording.is_set():
+                # print("Recording started...")
+            if not distance(thumb_coords, palm_coords) < 60 and recording.is_set():
                 recording.clear()
-                print("Recording complete.")
+                # print("Recording complete.")
 
-                # Transcribe the audio file
-                result = model.transcribe("output.wav")
-
-                # Print the transcribed text
-                print("Transcribed Text:")
-                print(result["text"])
 
             # EXECUTIONS --------------------------------------------------------------------------
 
@@ -193,8 +206,13 @@ while cap.isOpened():
             # SS
             if ssing:
                 pyautogui.screenshot(f"Hand Track Cam - {time.asctime()}")
-                subprocess.run(["screencapture", f"/Users/kaito/Desktop/Hand Track Cam - {time.asctime()}.png"])
+                subprocess.run(["screencapture", f"/Users/kaito/Desktop/HTC ss - {time.asctime()}.png"])
                 color = (0, 255, 255)
+            
+            # Take photo
+            if taking_photo:
+                cv2.imwrite(f"/Users/kaito/Desktop/HTC photo - {time.asctime()}.png", frame)
+                color = (0, 165, 255)
 
             # Recording
             if recording.is_set():
@@ -225,6 +243,7 @@ while cap.isOpened():
         scroll_down = False
         clicking = False
         ssing = False
+        taking_photo = False
 
         color = (255, 0, 0)
 
