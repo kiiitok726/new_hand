@@ -11,6 +11,14 @@ import scipy.io.wavfile as wav
 import whisper
 
 
+# Webcam detection border
+
+
+# Screen dimensions
+fscreen_x = 2560
+fscreen_y = 1600
+
+
 # booleans to set scrolling modes
 scroll_up = False
 scroll_down = False
@@ -72,26 +80,26 @@ mp_drawing = mp.solutions.drawing_utils
 #     print("Camera 0 Activated")
 
 
-# Initialize webcam, try multiple indices
-for camera_index in range(3):  # Try indices 0, 1, and 2
-        print(f"Trying to open camera with index {camera_index}...")
-        cap = cv2.VideoCapture(camera_index)
+# # Initialize webcam, try multiple indices
+# for camera_index in range(3):  # Try indices 0, 1, and 2
+#         print(f"Trying to open camera with index {camera_index}...")
+#         cap = cv2.VideoCapture(camera_index)
         
-        if not cap.isOpened():
-            print(f"Failed to open camera with index {camera_index}.")
-            continue
+#         if not cap.isOpened():
+#             print(f"Failed to open camera with index {camera_index}.")
+#             continue
             
-        # Check if we can actually read from the camera
-        success, test_frame = cap.read()
-        if not success:
-            print(f"Camera opened but failed to read frame from index {camera_index}.")
-            cap.release()
-            continue
+#         # Check if we can actually read from the camera
+#         success, test_frame = cap.read()
+#         if not success:
+#             print(f"Camera opened but failed to read frame from index {camera_index}.")
+#             cap.release()
+#             continue
             
-        print(f"Successfully connected to camera with index {camera_index}")
+#         print(f"Successfully connected to camera with index {camera_index}")
 
 ## Initialize specific webcam
-# cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(0)
 
 # Create webcam window
 cv2.namedWindow("Hand Track Cam")
@@ -171,15 +179,32 @@ while cap.isOpened():
             pinky_tip = hand_landmarks.landmark[mp_hands.HandLandmark.PINKY_TIP]
 
             # Convert normalized coordinates(0-1) to screen's pixel coordinates
-            thumb_coords = (int(thumb_tip.x * w), int(thumb_tip.y * h))
-            index_coords = (int(index_tip.x * w), int(index_tip.y * h))
-            middle_coords = (int(middle_tip.x * w), int(middle_tip.y * h))
-            ring_coords = (int(ring_tip.x * w), int(ring_tip.y * h))
-            pinky_coords = (int(pinky_tip.x * w), int(pinky_tip.y * h))
+            thumb_coords = (np.interp(thumb_tip.x, [0, 1], [0, fscreen_x]), np.interp(thumb_tip.y, [0, 1], [0, fscreen_y]))
+            index_coords = (np.interp(index_tip.x, [0, 1], [0, fscreen_x]), np.interp(index_tip.y, [0, 1], [0, fscreen_y]))
+            middle_coords = (np.interp(middle_tip.x, [0, 1], [0, fscreen_x]), np.interp(middle_tip.y, [0, 1], [0, fscreen_y]))
+            ring_coords = (np.interp(ring_tip.x, [0, 1], [0, fscreen_x]), np.interp(ring_tip.y, [0, 1], [0, fscreen_y]))
+            pinky_coords = (np.interp(pinky_tip.x, [0, 1], [0, fscreen_x]), np.interp(pinky_tip.y, [0, 1], [0, fscreen_y]))
+            print(f"({thumb_tip.x}, {thumb_tip.y}) - > {thumb_coords}")
+            print(f"({index_tip.x}, {index_tip.y}) - > {index_coords}")
+            print(f"({middle_tip.x}, {middle_tip.y}) - > {middle_coords}")
+            print(f"({ring_tip.x}, {ring_tip.y}) - > {ring_coords}")
+            print(f"({pinky_tip.x}, {pinky_tip.y}) - > {pinky_coords}")
+            # print(index_coords)
+            # print(middle_coords)
+            # print(ring_coords)
+            # print(pinky_coords)
+            print()
+
+            # thumb_coords = (int(thumb_tip.x * w), int(thumb_tip.y * h))
+            # index_coords = (int(index_tip.x * w), int(index_tip.y * h))
+            # middle_coords = (int(middle_tip.x * w), int(middle_tip.y * h))
+            # ring_coords = (int(ring_tip.x * w), int(ring_tip.y * h))
+            # pinky_coords = (int(pinky_tip.x * w), int(pinky_tip.y * h))
 
             palm_x = sum([hand_landmarks.landmark[i].x for i in indices]) / len(indices)
             palm_y = sum([hand_landmarks.landmark[i].y for i in indices]) / len(indices)
             palm_coords = (int(palm_x * w), int(palm_y * h))
+            # palm_coords = (np.interp(palm_x, [0, 1], [0, fscreen_x]), np.interp(palm_y, [0, 1], [0, fscreen_y]))
 
 
             # DETECTIONS -------------------------------------------------------------------------
@@ -240,20 +265,20 @@ while cap.isOpened():
             # DRAWINGS ----------------------------------------------------------------------------
 
             # Draw node at palm
-            cv2.circle(frame, palm_coords, 15, (0, 255, 0), -1)
+            # cv2.circle(frame, palm_coords, 15, (0, 255, 0), -1)
 
-            # Draw node at each fingertip
-            cv2.circle(frame, thumb_coords, 10, (0, 255, 0), -1)
-            cv2.circle(frame, index_coords, 10, (0, 255, 0), -1)
-            cv2.circle(frame, middle_coords, 10, (0, 255, 0), -1)
-            cv2.circle(frame, ring_coords, 10, (0, 255, 0), -1)
-            cv2.circle(frame, pinky_coords, 10, (0, 255, 0), -1)
+            # # Draw node at each fingertip
+            # cv2.circle(frame, thumb_coords, 10, (0, 255, 0), -1)
+            # cv2.circle(frame, index_coords, 10, (0, 255, 0), -1)
+            # cv2.circle(frame, middle_coords, 10, (0, 255, 0), -1)
+            # cv2.circle(frame, ring_coords, 10, (0, 255, 0), -1)
+            # cv2.circle(frame, pinky_coords, 10, (0, 255, 0), -1)
 
-            # Draw connecting lines
-            cv2.line(frame, thumb_coords, index_coords, color, 2)
-            cv2.line(frame, index_coords, middle_coords, color, 2)
-            cv2.line(frame, middle_coords, ring_coords, color, 2)
-            cv2.line(frame, ring_coords, pinky_coords, color, 2)
+            # # Draw connecting lines
+            # cv2.line(frame, thumb_coords, index_coords, color, 2)
+            # cv2.line(frame, index_coords, middle_coords, color, 2)
+            # cv2.line(frame, middle_coords, ring_coords, color, 2)
+            # cv2.line(frame, ring_coords, pinky_coords, color, 2)
         
 
         # RESET ----------------------------------------------------------------------------
