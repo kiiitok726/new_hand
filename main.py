@@ -15,8 +15,12 @@ import whisper
 
 
 # Screen dimensions
-fscreen_x = 2560
-fscreen_y = 1600
+fscreen_x, fscreen_y = pyautogui.size()
+
+# Sensitivity ratio (this determines how small of a portion of your webcam should convert to a fullscreen coordinate)
+border = 0.75
+border_top_left = (1-border)/2
+border_bottom_right = (1-border)/2 + border
 
 
 # booleans to set scrolling modes
@@ -179,32 +183,22 @@ while cap.isOpened():
             pinky_tip = hand_landmarks.landmark[mp_hands.HandLandmark.PINKY_TIP]
 
             # Convert normalized coordinates(0-1) to screen's pixel coordinates
-            thumb_coords = (np.interp(thumb_tip.x, [0, 1], [0, fscreen_x]), np.interp(thumb_tip.y, [0, 1], [0, fscreen_y]))
-            index_coords = (np.interp(index_tip.x, [0, 1], [0, fscreen_x]), np.interp(index_tip.y, [0, 1], [0, fscreen_y]))
-            middle_coords = (np.interp(middle_tip.x, [0, 1], [0, fscreen_x]), np.interp(middle_tip.y, [0, 1], [0, fscreen_y]))
-            ring_coords = (np.interp(ring_tip.x, [0, 1], [0, fscreen_x]), np.interp(ring_tip.y, [0, 1], [0, fscreen_y]))
-            pinky_coords = (np.interp(pinky_tip.x, [0, 1], [0, fscreen_x]), np.interp(pinky_tip.y, [0, 1], [0, fscreen_y]))
-            print(f"({thumb_tip.x}, {thumb_tip.y}) - > {thumb_coords}")
-            print(f"({index_tip.x}, {index_tip.y}) - > {index_coords}")
-            print(f"({middle_tip.x}, {middle_tip.y}) - > {middle_coords}")
-            print(f"({ring_tip.x}, {ring_tip.y}) - > {ring_coords}")
-            print(f"({pinky_tip.x}, {pinky_tip.y}) - > {pinky_coords}")
-            # print(index_coords)
-            # print(middle_coords)
-            # print(ring_coords)
-            # print(pinky_coords)
-            print()
-
-            # thumb_coords = (int(thumb_tip.x * w), int(thumb_tip.y * h))
-            # index_coords = (int(index_tip.x * w), int(index_tip.y * h))
-            # middle_coords = (int(middle_tip.x * w), int(middle_tip.y * h))
-            # ring_coords = (int(ring_tip.x * w), int(ring_tip.y * h))
-            # pinky_coords = (int(pinky_tip.x * w), int(pinky_tip.y * h))
+            thumb_coords = (np.interp(thumb_tip.x, [border_top_left, border_bottom_right], [0, fscreen_x]), np.interp(thumb_tip.y, [border_top_left, border_bottom_right], [0, fscreen_y]))
+            index_coords = (np.interp(index_tip.x, [border_top_left, border_bottom_right], [0, fscreen_x]), np.interp(index_tip.y, [border_top_left, border_bottom_right], [0, fscreen_y]))
+            middle_coords = (np.interp(middle_tip.x, [border_top_left, border_bottom_right], [0, fscreen_x]), np.interp(middle_tip.y, [border_top_left, border_bottom_right], [0, fscreen_y]))
+            ring_coords = (np.interp(ring_tip.x, [border_top_left, border_bottom_right], [0, fscreen_x]), np.interp(ring_tip.y, [border_top_left, border_bottom_right], [0, fscreen_y]))
+            pinky_coords = (np.interp(pinky_tip.x, [border_top_left, border_bottom_right], [0, fscreen_x]), np.interp(pinky_tip.y, [border_top_left, border_bottom_right], [0, fscreen_y]))
+            # print(f"({thumb_tip.x}, {thumb_tip.y}) - > {thumb_coords}")
+            # print(f"({index_tip.x}, {index_tip.y}) - > {index_coords}")
+            # print(f"({middle_tip.x}, {middle_tip.y}) - > {middle_coords}")
+            # print(f"({ring_tip.x}, {ring_tip.y}) - > {ring_coords}")
+            # print(f"({pinky_tip.x}, {pinky_tip.y}) - > {pinky_coords}")
+            # print()
 
             palm_x = sum([hand_landmarks.landmark[i].x for i in indices]) / len(indices)
             palm_y = sum([hand_landmarks.landmark[i].y for i in indices]) / len(indices)
             palm_coords = (int(palm_x * w), int(palm_y * h))
-            # palm_coords = (np.interp(palm_x, [0, 1], [0, fscreen_x]), np.interp(palm_y, [0, 1], [0, fscreen_y]))
+            palm_coords = (np.interp(palm_x, [border_top_left, border_bottom_right], [0, fscreen_x]), np.interp(palm_y, [border_top_left, border_bottom_right], [0, fscreen_y]))
 
 
             # DETECTIONS -------------------------------------------------------------------------
@@ -227,16 +221,25 @@ while cap.isOpened():
             if distance(thumb_coords, palm_coords) < 60 and not recording.is_set():
                 recording.set()
                 threading.Thread(target=record_audio_on_event, args=(recording, ), daemon=True).start()
-                # print("Recording started...")
+
             if not distance(thumb_coords, palm_coords) < 60 and recording.is_set():
                 recording.clear()
-                # print("Recording complete.")
 
 
             # EXECUTIONS --------------------------------------------------------------------------
 
             # Move cursor to index finger
             pyautogui.moveTo(index_coords[0], index_coords[1], _pause=False)
+
+            # Convert index_coords from float to int for OpenCV drawing
+            index_coords_int = (int(index_coords[0] * w / fscreen_x), int(index_coords[1] * h / fscreen_y))
+            coord_text = f"{int(index_coords[0])}, {int(index_coords[1])}"
+            original_text = f"{index_tip.x}, {index_tip.y}\n{int(index_coords[0])}, {int(index_coords[1])}"
+
+            # cv2.putText(frame, coord_text, (index_coords_int[0] + 20, index_coords_int[1] - 20),
+            # cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
+            cv2.putText(frame, original_text, (index_coords_int[0] + 20, index_coords_int[1] - 10),
+            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
 
             # Scroll
             if scroll_up:
