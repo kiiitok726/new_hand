@@ -128,6 +128,13 @@ while cap.isOpened():
     # Find webcam window dimensions
     h, w, c = frame.shape
 
+    # draw the blue “active area” box
+    x1 = int(border_top_left    * w)
+    y1 = int(border_top_left    * h)
+    x2 = int(border_bottom_right * w)
+    y2 = int(border_bottom_right * h)
+    cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
+
     # Default blue color for lines
     color = (255, 0, 0)
 
@@ -143,7 +150,7 @@ while cap.isOpened():
     )
 
     for (f_x, f_y, f_w, f_h) in faces:
-        cv2.rectangle(frame, (f_x,f_y), (f_x+f_w, f_y+f_h), (255, 0, 0), 2)
+        cv2.rectangle(frame, (f_x,f_y), (f_x+f_w, f_y+f_h), (0, 255, 255), 2)
         face_roi_gray = gray[f_y:f_y+f_h, f_x:f_x+f_w]
         face_roi_color = frame[f_y:f_y+f_h, f_x:f_x+f_w]
 
@@ -183,11 +190,11 @@ while cap.isOpened():
             pinky_tip = hand_landmarks.landmark[mp_hands.HandLandmark.PINKY_TIP]
 
             # Convert normalized coordinates(0-1) to screen's pixel coordinates
-            thumb_coords = (np.interp(thumb_tip.x, [border_top_left, border_bottom_right], [0, fscreen_x]), np.interp(thumb_tip.y, [border_top_left, border_bottom_right], [0, fscreen_y]))
-            index_coords = (np.interp(index_tip.x, [border_top_left, border_bottom_right], [0, fscreen_x]), np.interp(index_tip.y, [border_top_left, border_bottom_right], [0, fscreen_y]))
-            middle_coords = (np.interp(middle_tip.x, [border_top_left, border_bottom_right], [0, fscreen_x]), np.interp(middle_tip.y, [border_top_left, border_bottom_right], [0, fscreen_y]))
-            ring_coords = (np.interp(ring_tip.x, [border_top_left, border_bottom_right], [0, fscreen_x]), np.interp(ring_tip.y, [border_top_left, border_bottom_right], [0, fscreen_y]))
-            pinky_coords = (np.interp(pinky_tip.x, [border_top_left, border_bottom_right], [0, fscreen_x]), np.interp(pinky_tip.y, [border_top_left, border_bottom_right], [0, fscreen_y]))
+            thumb_coords = (int(np.interp(thumb_tip.x, [border_top_left, border_bottom_right], [0, fscreen_x])), int(np.interp(thumb_tip.y, [border_top_left, border_bottom_right], [0, fscreen_y])))
+            index_coords = (int(np.interp(index_tip.x, [border_top_left, border_bottom_right], [0, fscreen_x])), int(np.interp(index_tip.y, [border_top_left, border_bottom_right], [0, fscreen_y])))
+            middle_coords = (int(np.interp(middle_tip.x, [border_top_left, border_bottom_right], [0, fscreen_x])), int(np.interp(middle_tip.y, [border_top_left, border_bottom_right], [0, fscreen_y])))
+            ring_coords = (int(np.interp(ring_tip.x, [border_top_left, border_bottom_right], [0, fscreen_x])), int(np.interp(ring_tip.y, [border_top_left, border_bottom_right], [0, fscreen_y])))
+            pinky_coords = (int(np.interp(pinky_tip.x, [border_top_left, border_bottom_right], [0, fscreen_x])), int(np.interp(pinky_tip.y, [border_top_left, border_bottom_right], [0, fscreen_y])))
             # print(f"({thumb_tip.x}, {thumb_tip.y}) - > {thumb_coords}")
             # print(f"({index_tip.x}, {index_tip.y}) - > {index_coords}")
             # print(f"({middle_tip.x}, {middle_tip.y}) - > {middle_coords}")
@@ -197,8 +204,7 @@ while cap.isOpened():
 
             palm_x = sum([hand_landmarks.landmark[i].x for i in indices]) / len(indices)
             palm_y = sum([hand_landmarks.landmark[i].y for i in indices]) / len(indices)
-            palm_coords = (int(palm_x * w), int(palm_y * h))
-            palm_coords = (np.interp(palm_x, [border_top_left, border_bottom_right], [0, fscreen_x]), np.interp(palm_y, [border_top_left, border_bottom_right], [0, fscreen_y]))
+            palm_coords = (int(np.interp(palm_x, [border_top_left, border_bottom_right], [0, fscreen_x])), int(np.interp(palm_y, [border_top_left, border_bottom_right], [0, fscreen_y])))
 
 
             # DETECTIONS -------------------------------------------------------------------------
@@ -268,20 +274,20 @@ while cap.isOpened():
             # DRAWINGS ----------------------------------------------------------------------------
 
             # Draw node at palm
-            # cv2.circle(frame, palm_coords, 15, (0, 255, 0), -1)
+            cv2.circle(frame, palm_coords, 15, (0, 255, 0), -1)
 
-            # # Draw node at each fingertip
-            # cv2.circle(frame, thumb_coords, 10, (0, 255, 0), -1)
-            # cv2.circle(frame, index_coords, 10, (0, 255, 0), -1)
-            # cv2.circle(frame, middle_coords, 10, (0, 255, 0), -1)
-            # cv2.circle(frame, ring_coords, 10, (0, 255, 0), -1)
-            # cv2.circle(frame, pinky_coords, 10, (0, 255, 0), -1)
+            # Draw node at each fingertip
+            cv2.circle(frame, thumb_coords, 10, (0, 255, 0), -1)
+            cv2.circle(frame, index_coords, 10, (0, 255, 0), -1)
+            cv2.circle(frame, middle_coords, 10, (0, 255, 0), -1)
+            cv2.circle(frame, ring_coords, 10, (0, 255, 0), -1)
+            cv2.circle(frame, pinky_coords, 10, (0, 255, 0), -1)
 
-            # # Draw connecting lines
-            # cv2.line(frame, thumb_coords, index_coords, color, 2)
-            # cv2.line(frame, index_coords, middle_coords, color, 2)
-            # cv2.line(frame, middle_coords, ring_coords, color, 2)
-            # cv2.line(frame, ring_coords, pinky_coords, color, 2)
+            # Draw connecting lines
+            cv2.line(frame, thumb_coords, index_coords, color, 2)
+            cv2.line(frame, index_coords, middle_coords, color, 2)
+            cv2.line(frame, middle_coords, ring_coords, color, 2)
+            cv2.line(frame, ring_coords, pinky_coords, color, 2)
         
 
         # RESET ----------------------------------------------------------------------------
