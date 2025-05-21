@@ -128,6 +128,9 @@ while cap.isOpened():
     # Find webcam window dimensions
     h, w, c = frame.shape
 
+    border_top_left = (1-border)/2
+    border_bottom_right = (1-border)/2 + border
+
     # draw the blue “active area” box
     x1 = int(border_top_left    * w)
     y1 = int(border_top_left    * h)
@@ -157,7 +160,7 @@ while cap.isOpened():
         # Detect any smiles among detected faces
         smiles = smile_cascade.detectMultiScale(
             face_roi_gray,
-            scaleFactor=1.9,
+            scaleFactor=1.5,
             minNeighbors=30,
             minSize=(40, 40)
         )
@@ -190,21 +193,29 @@ while cap.isOpened():
             pinky_tip = hand_landmarks.landmark[mp_hands.HandLandmark.PINKY_TIP]
 
             # Convert normalized coordinates(0-1) to screen's pixel coordinates
-            thumb_coords = (int(np.interp(thumb_tip.x, [border_top_left, border_bottom_right], [0, fscreen_x])), int(np.interp(thumb_tip.y, [border_top_left, border_bottom_right], [0, fscreen_y])))
-            index_coords = (int(np.interp(index_tip.x, [border_top_left, border_bottom_right], [0, fscreen_x])), int(np.interp(index_tip.y, [border_top_left, border_bottom_right], [0, fscreen_y])))
-            middle_coords = (int(np.interp(middle_tip.x, [border_top_left, border_bottom_right], [0, fscreen_x])), int(np.interp(middle_tip.y, [border_top_left, border_bottom_right], [0, fscreen_y])))
-            ring_coords = (int(np.interp(ring_tip.x, [border_top_left, border_bottom_right], [0, fscreen_x])), int(np.interp(ring_tip.y, [border_top_left, border_bottom_right], [0, fscreen_y])))
-            pinky_coords = (int(np.interp(pinky_tip.x, [border_top_left, border_bottom_right], [0, fscreen_x])), int(np.interp(pinky_tip.y, [border_top_left, border_bottom_right], [0, fscreen_y])))
+            # thumb_coords = (int(np.interp(thumb_tip.x, [border_top_left, border_bottom_right], [0, fscreen_x])), int(np.interp(thumb_tip.y, [border_top_left, border_bottom_right], [0, fscreen_y])))
+            # index_coords = (int(np.interp(index_tip.x, [border_top_left, border_bottom_right], [0, fscreen_x])), int(np.interp(index_tip.y, [border_top_left, border_bottom_right], [0, fscreen_y])))
+            # middle_coords = (int(np.interp(middle_tip.x, [border_top_left, border_bottom_right], [0, fscreen_x])), int(np.interp(middle_tip.y, [border_top_left, border_bottom_right], [0, fscreen_y])))
+            # ring_coords = (int(np.interp(ring_tip.x, [border_top_left, border_bottom_right], [0, fscreen_x])), int(np.interp(ring_tip.y, [border_top_left, border_bottom_right], [0, fscreen_y])))
+            # pinky_coords = (int(np.interp(pinky_tip.x, [border_top_left, border_bottom_right], [0, fscreen_x])), int(np.interp(pinky_tip.y, [border_top_left, border_bottom_right], [0, fscreen_y])))
+            thumb_coords = (int(np.interp(thumb_tip.x, [0, 1], [0, w])), int(np.interp(thumb_tip.y, [0, 1], [0, h])))
+            index_coords = (int(np.interp(index_tip.x, [0, 1], [0, w])), int(np.interp(index_tip.y, [0, 1], [0, h])))
+            middle_coords = (int(np.interp(middle_tip.x, [0, 1], [0, w])), int(np.interp(middle_tip.y, [0, 1], [0, h])))
+            ring_coords = (int(np.interp(ring_tip.x, [0, 1], [0, w])), int(np.interp(ring_tip.y, [0, 1], [0, h])))
+            pinky_coords = (int(np.interp(pinky_tip.x, [0, 1], [0, w])), int(np.interp(pinky_tip.y, [0, 1], [0, h])))
+            cursor_coords = (int(np.interp(index_tip.x, [border_top_left, border_bottom_right], [0, fscreen_x])), int(np.interp(index_tip.y, [border_top_left, border_bottom_right], [0, fscreen_y])))
             # print(f"({thumb_tip.x}, {thumb_tip.y}) - > {thumb_coords}")
             # print(f"({index_tip.x}, {index_tip.y}) - > {index_coords}")
             # print(f"({middle_tip.x}, {middle_tip.y}) - > {middle_coords}")
             # print(f"({ring_tip.x}, {ring_tip.y}) - > {ring_coords}")
             # print(f"({pinky_tip.x}, {pinky_tip.y}) - > {pinky_coords}")
             # print()
+            
 
             palm_x = sum([hand_landmarks.landmark[i].x for i in indices]) / len(indices)
             palm_y = sum([hand_landmarks.landmark[i].y for i in indices]) / len(indices)
-            palm_coords = (int(np.interp(palm_x, [border_top_left, border_bottom_right], [0, fscreen_x])), int(np.interp(palm_y, [border_top_left, border_bottom_right], [0, fscreen_y])))
+            # palm_coords = (int(np.interp(palm_x, [border_top_left, border_bottom_right], [0, fscreen_x])), int(np.interp(palm_y, [border_top_left, border_bottom_right], [0, fscreen_y])))
+            palm_coords = (int(np.interp(palm_x, [0, 1], [0, w])), int(np.interp(palm_y, [0, 1], [0, h])))
 
 
             # DETECTIONS -------------------------------------------------------------------------
@@ -230,12 +241,21 @@ while cap.isOpened():
 
             if not distance(thumb_coords, palm_coords) < 60 and recording.is_set():
                 recording.clear()
+            
+            key = cv2.waitKey(1) & 0xFF
+
+            # Check for border changes
+            if key == ord('w'):
+                border += 0.05
+
+            if key == ord('s'):
+                border -= 0.05
 
 
             # EXECUTIONS --------------------------------------------------------------------------
 
             # Move cursor to index finger
-            pyautogui.moveTo(index_coords[0], index_coords[1], _pause=False)
+            pyautogui.moveTo(cursor_coords[0], cursor_coords[1], _pause=False)
 
             # Convert index_coords from float to int for OpenCV drawing
             index_coords_int = (int(index_coords[0] * w / fscreen_x), int(index_coords[1] * h / fscreen_y))
